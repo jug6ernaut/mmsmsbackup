@@ -10,7 +10,6 @@ import android.widget.*;
 import butterknife.ButterKnife;
 import butterknife.InjectView;
 import butterknife.OnClick;
-import com.jug6ernaut.sms.EULA.EULA;
 import com.michaelflisar.licenses.Helper;
 import com.michaelflisar.licenses.dialog.LicensesDialog;
 import com.michaelflisar.licenses.licenses.BaseLicenseEntry;

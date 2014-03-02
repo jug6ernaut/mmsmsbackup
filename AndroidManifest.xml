@@ -7,7 +7,7 @@
     <uses-sdk android:minSdkVersion="16"
               android:targetSdkVersion="19"/>
     <application
-            android:label="Root MMSMS Backup"
+            android:label="MMSMS Backup"
             android:icon="@drawable/ic_launcher">
 
         <activity android:name=".MainActivity" android:theme="@android:style/Theme.Holo.Light.DarkActionBar" >
