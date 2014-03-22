@@ -30,10 +30,10 @@ public class MMSMSBackup {
     private static final String commandViewArchive = "tar -tf %s %s";
 
     public static Observable<List<String>> restore(final Activity activity, final String savePath,final String fileName){
+        final ProgressDialog dialog = launchRingDialog(activity, "restoring " + fileName + "...");
         return Observable.create(new Observable.OnSubscribe<List<String>>() {
             @Override
             public void call(final Subscriber<? super List<String>> observer) {
-                final ProgressDialog dialog = launchRingDialog(activity, "restoring " + fileName + "...");
                 final Thread thread = new Thread() {
                     @Override
                     public void run() {
@@ -65,15 +65,15 @@ public class MMSMSBackup {
                 };
                 thread.start();
             }
-        }).observeOn(Schedulers.io())
-          .subscribeOn(AndroidSchedulers.mainThread());
+        }).subscribeOn(Schedulers.io())
+          .observeOn(AndroidSchedulers.mainThread());
     }
 
     public static Observable<List<String>> backup(final Activity activity, final String savePath, final String fileName){
+        final ProgressDialog dialog = launchRingDialog(activity, "backing up " + fileName + "...");
         return Observable.create(new Observable.OnSubscribe<List<String>>() {
             @Override
             public void call(final Subscriber<? super List<String>> observer) {
-                final ProgressDialog dialog = launchRingDialog(activity, "backing up " + fileName + "...");
                 final Thread thread = new Thread() {
                     @Override
                     public void run() {
@@ -105,8 +105,8 @@ public class MMSMSBackup {
                 };
                 thread.start();
             }
-        }).observeOn(Schedulers.io())
-          .subscribeOn(AndroidSchedulers.mainThread());
+        }).subscribeOn(Schedulers.io())
+          .observeOn(AndroidSchedulers.mainThread());
     }
 
     public static Observable<Boolean> validate(final String savePath, final String fileName){
@@ -133,8 +133,8 @@ public class MMSMSBackup {
                 };
                 thread.start();
             }
-        }).observeOn(Schedulers.io())
-          .subscribeOn(AndroidSchedulers.mainThread());
+        }).subscribeOn(Schedulers.io())
+          .observeOn(AndroidSchedulers.mainThread());
     }
 
     public static Observable delete(final String savePath, final String fileName){
@@ -155,23 +155,28 @@ public class MMSMSBackup {
                 };
                 thread.start();
             }
-        }).observeOn(Schedulers.io())
-          .subscribeOn(AndroidSchedulers.mainThread());
+        }).subscribeOn(Schedulers.io())
+          .observeOn(AndroidSchedulers.mainThread());
     }
 
     public static Observable<Boolean> haveSU(final Activity activity){
+        final ProgressDialog dialog = launchRingDialog(activity, "checking for SuperUser..");
         return Observable.create(new Observable.OnSubscribe<Boolean>() {
 
             @Override
             public void call(final Subscriber<? super Boolean> subscriber) {
-                final ProgressDialog dialog = launchRingDialog(activity, "checking for SuperUser..");
                 final Thread thread = new Thread() {
                     @Override
                     public void run() {
                         try {
                             subscriber.onNext(Shell.SU.available());
                             subscriber.onCompleted();
-                            dialog.dismiss();
+                            activity.runOnUiThread(new Runnable() {
+                                @Override
+                                public void run() {
+                                    dialog.dismiss();
+                                }
+                            });
                         } catch (Exception e) {
                             subscriber.onNext(false);
                             subscriber.onError(e);
@@ -180,21 +185,14 @@ public class MMSMSBackup {
                 };
                 thread.start();
             }
-        }).observeOn(Schedulers.io())
-          .subscribeOn(AndroidSchedulers.mainThread());
+        }).subscribeOn(Schedulers.io())
+          .observeOn(AndroidSchedulers.mainThread());
     }
 
     public static ProgressDialog launchRingDialog(final Activity activity,final String message) {
-        final ProgressDialog[] ringProgressDialog = new ProgressDialog[1];
-        activity.runOnUiThread(new Runnable() {
-            @Override
-            public void run() {
-                ringProgressDialog[0] = ProgressDialog.show(activity, "Please wait ...", message, true);
-                ringProgressDialog[0].setCancelable(false);
-            }
-        });
-
-        return ringProgressDialog[0];
+        final ProgressDialog ringProgressDialog = ProgressDialog.show(activity, "Please wait ...", message, true);
+        ringProgressDialog.setCancelable(false);
+        return ringProgressDialog;
     }
 
     static PublishSubject<String> loginEventPublisher = PublishSubject.create();

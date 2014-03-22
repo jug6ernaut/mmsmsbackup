@@ -16,7 +16,12 @@ import com.michaelflisar.licenses.licenses.BaseLicenseEntry;
 import com.michaelflisar.licenses.licenses.Licenses;
 import com.michaelflisar.universalloader.ULActivity;
 import de.timroes.android.listview.EnhancedListView;
+import eu.chainfire.libsuperuser.Shell;
+import rx.Observable;
+import rx.Subscriber;
+import rx.android.schedulers.AndroidSchedulers;
 import rx.functions.Action1;
+import rx.schedulers.Schedulers;
 
 import java.io.File;
 import java.text.SimpleDateFormat;
@@ -48,7 +53,6 @@ public class MainActivity extends ULActivity implements AdapterView.OnItemClickL
                 MMSMSBackup.haveSU(MainActivity.this).subscribe(new Action1<Boolean>() {
                     @Override
                     public void call(Boolean found) {
-                        System.out.println("Found: " + found);
                         if(!found)showError();
                     }
                 });
@@ -58,7 +62,6 @@ public class MainActivity extends ULActivity implements AdapterView.OnItemClickL
             MMSMSBackup.haveSU(MainActivity.this).subscribe(new Action1<Boolean>() {
                 @Override
                 public void call(Boolean found) {
-                    System.out.println("Found: " + found);
                     if(!found)showError();
                 }
             });
@@ -89,15 +92,19 @@ public class MainActivity extends ULActivity implements AdapterView.OnItemClickL
     }
 
     public void reload(){
-        ArrayList<String> files = AnalysisDir.getFiles(BACKUP_FOLDER);
-        final List<String> names = new ArrayList<String>(files.size());
-        for(String file : files){
-            names.add(new File(file).getName());
-        }
-
-        this.runOnUiThread(new Runnable() {
+        Observable.create(new Observable.OnSubscribe<List<String>>() {
             @Override
-            public void run() {
+            public void call(Subscriber<? super List<String>> subscriber) {
+                ArrayList<String> files = AnalysisDir.getFiles(BACKUP_FOLDER);
+                final List<String> names = new ArrayList<String>(files.size());
+                for(String file : files){
+                    names.add(new File(file).getName());
+                }
+                subscriber.onNext(names);
+            }
+        }).subscribeOn(Schedulers.io()).observeOn(AndroidSchedulers.mainThread()).subscribe(new Action1<List<String>>() {
+            @Override
+            public void call(List<String> names) {
                 MainActivity.this.files.clear();
                 MainActivity.this.files.addAll(names);
                 MainActivity.this.adapter.notifyDataSetInvalidated();
@@ -105,7 +112,6 @@ public class MainActivity extends ULActivity implements AdapterView.OnItemClickL
                 MainActivity.this.listView.invalidateViews();
             }
         });
-
     }
 
     @OnClick(R.id.buttonBackup)
@@ -179,7 +185,12 @@ public class MainActivity extends ULActivity implements AdapterView.OnItemClickL
                     @Override
                     public void call(Boolean valid) {
                         if (valid) {
-                            MMSMSBackup.restore(MainActivity.this, BACKUP_FOLDER, fileName).subscribe();
+                            MMSMSBackup.restore(MainActivity.this, BACKUP_FOLDER, fileName).subscribe(new Action1<List<String>>() {
+                                @Override
+                                public void call(List<String> strings) {
+                                    showReboot();
+                                }
+                            });
                         } else {
                             Toast.makeText(MainActivity.this, "Invalid Backup File.", Toast.LENGTH_LONG).show();
                         }
@@ -236,6 +247,31 @@ public class MainActivity extends ULActivity implements AdapterView.OnItemClickL
                     @Override
                     public void onClick(DialogInterface dialogInterface, int i) {
                         MainActivity.this.finish();
+                    }
+                });
+                dialog.show();
+            }
+        });
+    }
+
+    private void showReboot(){
+        this.runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                final AlertDialog dialog = new AlertDialog.Builder(MainActivity.this).create();
+                dialog.setTitle("Reboot");
+                dialog.setCancelable(false);
+                dialog.setMessage("To complete the process your device needs to reboot. Would you like to do so now?");
+                dialog.setButton(DialogInterface.BUTTON_POSITIVE,"Ok",new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialogInterface, int i) {
+                        Shell.SU.run("reboot");
+                    }
+                });
+                dialog.setButton(DialogInterface.BUTTON_NEGATIVE,"Cancel",new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialogInterface, int i) {
+                        dialog.dismiss();
                     }
                 });
                 dialog.show();
